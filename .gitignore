@@ -1,0 +1,11 @@
+# Virtual environment
+venv/
+.env
+
+# Secrets
+client.properties
+
+# Cache & temp
+__pycache__/
+*.pyc
+.DS_Store
