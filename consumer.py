@@ -76,11 +76,16 @@ try:
         # 4. AI Processing
         try:
             prompt = f"""
-            Act as a Data Engineer. Fix this JSON.
-            1. Correct typos in 'user_location' and 'product_name'.
-            2. Add "status": "enriched".
-            3. Return ONLY valid JSON string.
-            Input: {raw_json}
+            Act as a Data Engineer. Processing a raw data stream.
+            
+            Rules:
+            1. PRESERVE all original fields (transaction_id, amount, timestamp).
+            2. FIX typos in 'user_location' (e.g., "San Fran" -> "San Francisco").
+            3. FIX typos in 'product_name' (e.g., "Lptop" -> "Laptop").
+            4. ADD field "status": "enriched".
+            5. Output strictly VALID JSON. No duplicates.
+
+            Input JSON: {raw_json}
             """
             
             response = model.generate_content(prompt)
