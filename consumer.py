@@ -2,6 +2,7 @@ from confluent_kafka import Consumer, Producer
 import json
 import time
 import google.generativeai as genai
+import os
 
 # 1. Read configuration
 def read_config():
@@ -56,6 +57,16 @@ def delivery_report(err, msg):
     else:
         print(f"📤 Saved to clean-data: {msg.topic()} [{msg.partition()}]")
 
+def get_prompt(data_str):
+    """Reads template from file and inserts data"""
+    try:
+        with open("prompt_template.txt", "r", encoding="utf-8") as f:
+            template = f.read()
+        return template.replace("{{DATA}}", data_str)
+    except FileNotFoundError:
+        print("❌ Error: prompt_template.txt not found!")
+        return None
+
 print("👀 Stream Refinery Active... (Ctrl+C to exit)")
 
 try:
@@ -75,34 +86,24 @@ try:
 
         # 4. AI Processing
         try:
-            prompt = f"""
-            Act as a Data Engineer. Processing a raw data stream.
-            
-            Rules:
-            1. PRESERVE all original fields (transaction_id, amount, timestamp).
-            2. STANDARDIZE 'user_location': Expand abbreviations and fix typos (e.g., "NY" -> "New York", "San Fran" -> "San Francisco").
-            3. STANDARDIZE 'product_name': Fix typos (e.g., "Lptop" -> "Laptop", "Iphone" -> "iPhone").
-            4. ADD field "status": "enriched".
-            5. Output strictly VALID JSON. No duplicates.
+            prompt = get_prompt(raw_json)
 
-            Input JSON: {raw_json}
-            """
-            
-            response = model.generate_content(prompt)
-            clean_json_str = response.text.replace("```json", "").replace("```", "").strip()
-            
-            # Validate JSON before sending
-            json.loads(clean_json_str) 
-            
-            print(f"✨ AI Cleaned: {clean_json_str}")
+            if prompt:
+                response = model.generate_content(prompt)
+                clean_json_str = response.text.replace("```json", "").replace("```", "").strip()
+                
+                # Validate JSON before sending
+                json.loads(clean_json_str) 
+                
+                print(f"✨ AI Cleaned: {clean_json_str}")
 
-            # 5. Produce to 'clean-data'
-            producer.produce(
-                "clean-data",
-                value=clean_json_str,
-                callback=delivery_report
-            )
-            producer.poll(0) # Trigger callback
+                # 5. Produce to 'clean-data'
+                producer.produce(
+                    "clean-data",
+                    value=clean_json_str,
+                    callback=delivery_report
+                )
+                producer.poll(0) # Trigger callback
 
         except Exception as e:
             print(f"⚠️ Processing Error: {e}")
