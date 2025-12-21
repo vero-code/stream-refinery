@@ -12,7 +12,11 @@ def read_config():
             # Skip empty lines, comments, or lines without '='
             if len(line) != 0 and line[0] != "#" and "=" in line:
                 parameter, value = line.strip().split('=', 1)
-                config[parameter] = value
+
+                if parameter.strip() == "google.api.key":
+                    continue
+
+                config[parameter.strip()] = value.strip()
     return config
 
 # 2. Create Producer
