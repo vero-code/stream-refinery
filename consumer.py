@@ -80,8 +80,8 @@ try:
             
             Rules:
             1. PRESERVE all original fields (transaction_id, amount, timestamp).
-            2. FIX typos in 'user_location' (e.g., "San Fran" -> "San Francisco").
-            3. FIX typos in 'product_name' (e.g., "Lptop" -> "Laptop").
+            2. STANDARDIZE 'user_location': Expand abbreviations and fix typos (e.g., "NY" -> "New York", "San Fran" -> "San Francisco").
+            3. STANDARDIZE 'product_name': Fix typos (e.g., "Lptop" -> "Laptop", "Iphone" -> "iPhone").
             4. ADD field "status": "enriched".
             5. Output strictly VALID JSON. No duplicates.
 
