@@ -1,4 +1,4 @@
-from confluent_kafka import Consumer
+from confluent_kafka import Consumer, Producer
 import json
 import time
 import google.generativeai as genai
@@ -19,31 +19,44 @@ def read_config():
                     config[parameter.strip()] = value.strip()
     
     # Consumer specific settings
-    config["group.id"] = "stream-refinery-group"
-    config["auto.offset.reset"] = "earliest"
-    return config, google_key
+    consumer_config = config.copy()
+    consumer_config["group.id"] = "stream-refinery-group"
+    consumer_config["auto.offset.reset"] = "earliest"
+    
+    # Producer settings
+    producer_config = config.copy()
+    
+    return consumer_config, producer_config, google_key
 
-# 2. Configure Gemini 2.5 Flash
-config_kafka, google_api_key = read_config()
+# 2. Setup Google AI and Kafka
+consumer_config, producer_config, google_api_key = read_config()
 
 if not google_api_key:
-    print("❌ Error: google.api.key not found in client.properties")
+    print("❌ Error: google.api.key not found")
     exit(1)
 
 genai.configure(api_key=google_api_key)
 
 try:
     model = genai.GenerativeModel('gemini-2.5-flash')
-    print("✅ Gemini 2.5 Flash connected successfully.")
+    print("✅ Gemini 2.5 Flash connected.")
 except Exception as e:
     print(f"⚠️ Model connection error (using fallback): {e}")
     model = genai.GenerativeModel('gemini-1.5-flash')
 
 # 3. Connect to Confluent Consumer
-consumer = Consumer(config_kafka)
+consumer = Consumer(consumer_config)
 consumer.subscribe(["raw-data"])
+producer = Producer(producer_config)
 
-print("👀 Listening for data stream... (Ctrl+C to exit)")
+# Callback for delivery confirmation
+def delivery_report(err, msg):
+    if err:
+        print(f"❌ Delivery failed: {err}")
+    else:
+        print(f"📤 Saved to clean-data: {msg.topic()} [{msg.partition()}]")
+
+print("👀 Stream Refinery Active... (Ctrl+C to exit)")
 
 try:
     while True:
@@ -60,33 +73,40 @@ try:
         raw_json = msg.value().decode('utf-8')
         print(f"\n📥 Input: {raw_json}")
 
-        # 4. Send to AI for cleaning
+        # 4. AI Processing
         try:
             prompt = f"""
-            Act as a Data Engineer. Fix this JSON data.
-            Task:
-            1. Correct typos in 'user_location' (e.g., "Nw York" -> "New York").
-            2. Standardize 'product_name' (e.g., "Lptop" -> "Laptop").
-            3. Add a field "ai_model": "gemini-2.5-flash".
-            4. Return ONLY the valid JSON string. No markdown formatting.
-
-            Input JSON: {raw_json}
+            Act as a Data Engineer. Fix this JSON.
+            1. Correct typos in 'user_location' and 'product_name'.
+            2. Add "status": "enriched".
+            3. Return ONLY valid JSON string.
+            Input: {raw_json}
             """
             
             response = model.generate_content(prompt)
+            clean_json_str = response.text.replace("```json", "").replace("```", "").strip()
             
-            # Clean response from markdown tags if present
-            clean_json = response.text.replace("```json", "").replace("```", "").strip()
+            # Validate JSON before sending
+            json.loads(clean_json_str) 
             
-            print(f"✨ Output (Gemini 2.5): {clean_json}")
+            print(f"✨ AI Cleaned: {clean_json_str}")
+
+            # 5. Produce to 'clean-data'
+            producer.produce(
+                "clean-data",
+                value=clean_json_str,
+                callback=delivery_report
+            )
+            producer.poll(0) # Trigger callback
 
         except Exception as e:
-            print(f"⚠️ AI Error: {e}")
+            print(f"⚠️ Processing Error: {e}")
 
         # Sleep to respect Free Tier rate limits (approx 15 RPM)
         time.sleep(5)
 
 except KeyboardInterrupt:
-    print("\n🛑 Consumer stopped.")
+    print("Stopping...")
 finally:
     consumer.close()
+    producer.flush()

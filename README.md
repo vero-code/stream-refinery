@@ -7,9 +7,9 @@ Standardize and fix "dirty" data streams (typos in locations, product names) on 
 
 ## Architecture (The Onion)
 1.  **Ingestion:** Python Producer generates mock transactions with intentional errors.
-2.  **Transport:** Confluent Cloud (Kafka) streams the raw data.
-3.  **Intelligence:** Google Vertex AI (Gemini) processes and cleans the JSON.
-4.  **Output:** Clean data is pushed to a destination topic / displayed.
+2.  **Transport:** Confluent Cloud (Kafka) streams the raw data to the `raw-data` topic.
+3.  **Intelligence:** Google Vertex AI (Gemini) processes the JSON, fixes typos, and enriches the data.
+4.  **Output:** Clean, validated data is produced back to the `clean-data` topic in real-time.
 
 ## Setup
 
@@ -43,3 +43,6 @@ Standardize and fix "dirty" data streams (typos in locations, product names) on 
     ```bash
     python consumer.py
     ```
+
+4.  **Verification:**
+    Check the terminal output for "✨ AI Cleaned" logs, or navigate to Confluent Cloud -> Topics -> `clean-data` to see the enriched messages appearing in real-time.
