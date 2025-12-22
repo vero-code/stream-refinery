@@ -6,7 +6,7 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-**"Garbage In, Gold Out"** — Real-time data cleaning and enrichment using Confluent and Google Vertex AI.
+**"Garbage In, Gold Out"** — Real-time data cleaning and enrichment using Confluent and Google Vertex AI. This project was developed specifically for the [**AI Partner Catalyst: Accelerate Innovation**](https://devpost.com/software/stream-refinery) hackathon to demonstrate real-time data cleansing using GenAI.
 
 ## 📺 Demo Video
 *(Will be added later.)*
