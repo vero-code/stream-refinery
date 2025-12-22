@@ -47,27 +47,48 @@ if 'clean_history' not in st.session_state:
 # --- CONFIGURATION ---
 def read_config():
     config = {}
-    if os.path.exists("client.properties"):
-        with open("client.properties") as fh:
-            for line in fh:
-                line = line.strip()
-                if len(line) != 0 and line[0] != "#" and "=" in line:
-                    parameter, value = line.strip().split('=', 1)
-                    if parameter.strip() != "google.api.key": 
-                        config[parameter.strip()] = value.strip()
+    
+    # 1. Try loading from Streamlit Secrets (Cloud)
+    try:
+        if "kafka" in st.secrets:
+            config.update(dict(st.secrets["kafka"]))
+        if "google" in st.secrets:
+            os.environ["GOOGLE_API_KEY"] = st.secrets["google"]["api_key"]
+            
+    except (FileNotFoundError, KeyError):
+        pass
+
+    # 2. If config is still empty, read local file (Local)
+    # if not config and os.path.exists("client.properties"):
+    #     with open("client.properties") as fh:
+    #         for line in fh:
+    #             line = line.strip()
+    #             if len(line) != 0 and line[0] != "#" and "=" in line:
+    #                 parameter, value = line.strip().split('=', 1)
+    #                 if parameter.strip() == "google.api.key":
+    #                     os.environ["GOOGLE_API_KEY"] = value.strip()
+    #                 else:
+    #                     config[parameter.strip()] = value.strip()
     return config
 
 # --- MAIN APP ---
 try:
     config = read_config()
-    config["group.id"] = "streamlit-viewer-history-v3"
-    config["auto.offset.reset"] = "latest"
+    
+    if "group.id" not in config:
+        config["group.id"] = "streamlit-viewer-local-dev"
+    
+    if "auto.offset.reset" not in config:
+        config["auto.offset.reset"] = "latest"
     
     consumer = Consumer(config)
     consumer.subscribe(["raw-data", "clean-data"])
 
     # Status Notification
-    st.toast("✅ Connected to Confluent Cloud. Waiting for stream...", icon="🟢")
+    if "bootstrap.servers" in config:
+        st.toast("✅ Connected to Confluent Cloud. Waiting for stream...", icon="🟢")
+    else:
+        st.error("❌ Configuration missing. Please check client.properties or Secrets.")
 
     # --- LIVE LOOP ---
     while True:
@@ -113,3 +134,4 @@ try:
 
 except Exception as e:
     st.error(f"Connection Error: {e}")
+    st.info("Tip: If running locally, check client.properties. If in Cloud, check Secrets.")
