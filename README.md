@@ -14,7 +14,12 @@
 ## Project Goal
 Standardize and fix "dirty" data streams (typos in locations, product names) on the fly using LLMs, transforming a chaotic raw stream into a high-quality analytical dataset without manual intervention.
 
-## Architecture (The Onion)
+## 🏗️ Architecture
+
+![Stream Refinery Architecture](assets/architecture.png)
+
+> *Real-time pipeline: Confluent Cloud streams ➡️ Gemini AI cleaning ➡️ Streamlit Dashboard.*
+
 1.  **Ingestion:** Python Producer generates mock transactions with intentional errors.
 2.  **Transport:** Confluent Cloud (Kafka) streams the raw data to the `raw-data` topic.
 3.  **Intelligence:** Google Vertex AI (Gemini) processes the JSON, fixes typos, and enriches the data.
