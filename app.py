@@ -11,28 +11,42 @@ st.set_page_config(
     layout="wide"
 )
 
-# Title and Description
+# Custom CSS to make JSON compact
+st.markdown("""
+<style>
+    .element-container {margin-bottom: -1rem;}
+    div.stCode {margin-bottom: 1rem;}
+</style>
+""", unsafe_allow_html=True)
+
+# Title
 st.title("🌊 Stream Refinery")
 st.markdown("**Real-time AI Data Cleaning Pipeline** powered by Confluent & Gemini 2.5")
 st.markdown("---")
 
-# Layout: Split screen into two columns
 col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("📥 Raw Data Stream (Dirty)")
     st.caption("Listening to topic: raw-data")
-    raw_placeholder = st.empty()
+    # Placeholder for the raw list
+    raw_container = st.container()
 
 with col2:
     st.subheader("✨ AI Cleaned Data (Enriched)")
     st.caption("Listening to topic: clean-data")
-    clean_placeholder = st.empty()
+    # Placeholder for the clean list
+    clean_container = st.container()
 
-# --- CONFIGURATION SETUP ---
+# --- INITIALIZE SESSION STATE (HISTORY) ---
+if 'raw_history' not in st.session_state:
+    st.session_state.raw_history = []
+if 'clean_history' not in st.session_state:
+    st.session_state.clean_history = []
+
+# --- CONFIGURATION ---
 def read_config():
     config = {}
-    # Check if local file exists
     if os.path.exists("client.properties"):
         with open("client.properties") as fh:
             for line in fh:
@@ -43,56 +57,59 @@ def read_config():
                         config[parameter.strip()] = value.strip()
     return config
 
-# --- KAFKA CONSUMER SETUP ---
+# --- MAIN APP ---
 try:
     config = read_config()
-    # Unique group ID for the frontend to read independently
-    config["group.id"] = "streamlit-viewer-group-v2" 
-    config["auto.offset.reset"] = "latest" # Read only new messages to look "live"
+    config["group.id"] = "streamlit-viewer-history-v3"
+    config["auto.offset.reset"] = "latest"
     
     consumer = Consumer(config)
-    
-    # Subscribe to BOTH topics to visualize the pipeline
     consumer.subscribe(["raw-data", "clean-data"])
 
-    # Visual indicator of connection
-    st.success("✅ Connected to Confluent Cloud. Waiting for live data...")
+    # Status Notification
+    st.toast("✅ Connected to Confluent Cloud. Waiting for stream...", icon="🟢")
 
-    # --- MAIN LOOP (AUTO-START) ---
+    # --- LIVE LOOP ---
     while True:
-        msg = consumer.poll(0.5)
+        msg = consumer.poll(0.2)
         
-        if msg is None: 
-            continue
-        if msg.error():
-            continue
+        if msg is None: continue
+        if msg.error(): continue
 
-        # Determine topic and decode value
         topic = msg.topic()
         value = msg.value().decode('utf-8')
         
-        # Update UI based on topic
+        # 1. RAW DATA LOGIC
         if topic == "raw-data":
-            with raw_placeholder.container():
-                # Display Raw Data as Code Block for "tech" feel
-                try:
-                    json_data = json.loads(value)
-                    st.code(json.dumps(json_data, indent=2), language="json")
-                except:
-                    st.text(value)
+            try:
+                data = json.loads(value)
+                st.session_state.raw_history.insert(0, data)
+                st.session_state.raw_history = st.session_state.raw_history[:4]
+                
+                # Render the list
+                with raw_container:
+                    raw_container.empty() 
+                    for item in st.session_state.raw_history:
+                        st.code(json.dumps(item, indent=2), language="json")
+            except:
+                pass
         
+        # 2. CLEAN DATA LOGIC
         elif topic == "clean-data":
-            with clean_placeholder.container():
-                # Display Clean Data as interactive JSON
-                try:
-                    json_data = json.loads(value)
-                    st.json(json_data)
-                except:
-                    st.text(value)
+            try:
+                data = json.loads(value)
+                st.session_state.clean_history.insert(0, data)
+                st.session_state.clean_history = st.session_state.clean_history[:4]
+                
+                with clean_container:
+                    clean_container.empty()
+                    for item in st.session_state.clean_history:
+                        st.json(item)
+                        st.markdown("---")
+            except:
+                pass
         
-        # Slight delay to prevent UI flickering
-        time.sleep(0.2)
+        time.sleep(0.1)
 
 except Exception as e:
     st.error(f"Connection Error: {e}")
-    st.info("Tip: Ensure client.properties is present and correct.")

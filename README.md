@@ -1,6 +1,15 @@
 # Stream Refinery 🌊🧠
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
+![Confluent](https://img.shields.io/badge/Confluent-Kafka-000000?logo=apachekafka&logoColor=white)
+![Google AI](https://img.shields.io/badge/Google_AI-Gemini_2.5-4285F4?logo=google&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 **"Garbage In, Gold Out"** — Real-time data cleaning and enrichment using Confluent and Google Vertex AI.
+
+## 📺 Demo Video
+*(Will be added later.)*
 
 ## Project Goal
 Standardize and fix "dirty" data streams (typos in locations, product names) on the fly using LLMs, transforming a chaotic raw stream into a high-quality analytical dataset without manual intervention.
@@ -10,6 +19,7 @@ Standardize and fix "dirty" data streams (typos in locations, product names) on 
 2.  **Transport:** Confluent Cloud (Kafka) streams the raw data to the `raw-data` topic.
 3.  **Intelligence:** Google Vertex AI (Gemini) processes the JSON, fixes typos, and enriches the data.
 4.  **Output:** Clean, validated data is produced back to the `clean-data` topic in real-time.
+5.  **Visualization:** A Streamlit dashboard consumes both topics to display a live side-by-side comparison with a history stack.
 
 ## Setup
 
@@ -44,5 +54,13 @@ Standardize and fix "dirty" data streams (typos in locations, product names) on 
     python consumer.py
     ```
 
+    **Terminal 3 (Live Dashboard):**
+    ```bash
+    streamlit run app.py
+    ```
+
 4.  **Verification:**
-    Check the terminal output for "✨ AI Cleaned" logs, or navigate to Confluent Cloud -> Topics -> `clean-data` to see the enriched messages appearing in real-time.
+    Open your browser at `http://localhost:8501`. You will see the "Dirty" stream on the left and the AI-cleaned "Enriched" stream on the right appearing in real-time.
+
+## 📄 License
+This project is open-source and available under the [MIT License](LICENSE).

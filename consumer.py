@@ -21,7 +21,7 @@ def read_config():
     
     # Consumer specific settings
     consumer_config = config.copy()
-    consumer_config["group.id"] = "stream-refinery-group"
+    consumer_config["group.id"] = "stream-refinery-group-v3"
     consumer_config["auto.offset.reset"] = "earliest"
     
     # Producer settings
