@@ -3,6 +3,8 @@ from confluent_kafka import Consumer
 import json
 import time
 import os
+import random
+from datetime import datetime
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -86,6 +88,43 @@ with col2:
     st.caption("Listening to topic: clean-data")
     clean_container = st.container()
 
+# --- HELPER FUNCTIONS ---
+def generate_mock_data():
+    """Mock data generator"""
+    corrections_map = {
+        "Lptop": "Laptop",
+        "Phon": "Smartphone",
+        "Coffe": "Coffee Maker",
+        "Headphns": "Headphones",
+        "Camra": "Digital Camera"
+    }
+    
+    locations_map = {
+        "ny": "New York",
+        "san fran": "San Francisco",
+        "chicago": "Chicago",
+        "austin": "Austin",
+        "la": "Los Angeles"
+    }
+   
+    raw_prod = random.choice(list(corrections_map.keys()))
+    raw_loc = random.choice(list(locations_map.keys()))
+    
+    raw = {
+        "transaction_id": random.randint(1000, 9999),
+        "product_name": raw_prod,
+        "location": raw_loc,
+        "amount": round(random.uniform(10.0, 500.0), 2),
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    clean = raw.copy()
+    clean["product_name"] = corrections_map[raw_prod]
+    clean["location"] = locations_map[raw_loc]
+    clean["status"] = "enriched"
+    
+    return raw, clean
+
 # --- CONFIGURATION ---
 def read_config():
     config = {}
@@ -126,18 +165,24 @@ if not st.session_state.is_running:
 
 else:
     status_message.empty()
-
     config = read_config()
 
     if "bootstrap.servers" in config:
         if st.session_state.mode_index != 1:
             st.session_state.mode_index = 1
             st.rerun()
+    else:
+        if st.session_state.mode_index != 0:
+            st.session_state.mode_index = 0
+            st.rerun()
 
-    if "group.id" not in config: config["group.id"] = "streamlit-viewer-local-dev"
-    if "auto.offset.reset" not in config: config["auto.offset.reset"] = "latest"
+    # --- BRANCHING BY MODES ---
 
+    # 1. REAL KAFKA MODE
     if "bootstrap.servers" in config:
+        if "group.id" not in config: config["group.id"] = "streamlit-viewer-local-dev"
+        if "auto.offset.reset" not in config: config["auto.offset.reset"] = "latest"
+        
         try:
             consumer = Consumer(config)
             consumer.subscribe(["raw-data", "clean-data"])
@@ -192,6 +237,31 @@ else:
         except Exception as e:
             st.error(f"Connection Error: {e}")
             st.session_state.is_running = False
+
+    # 2. SIMULATION MODE
     else:
-        st.error("❌ Configuration missing.")
-        st.session_state.is_running = False
+        st.toast("Running in Simulation Mode", icon="🟢")
+        
+        while st.session_state.is_running:
+            raw_data, clean_data = generate_mock_data()
+            
+            # Show Raw
+            st.session_state.raw_history.insert(0, raw_data)
+            st.session_state.raw_history = st.session_state.raw_history[:4]
+            with raw_container:
+                raw_container.empty()
+                for item in st.session_state.raw_history:
+                    st.code(json.dumps(item, indent=2), language="json")
+            
+            time.sleep(0.5)
+            
+            # Show Clean
+            st.session_state.clean_history.insert(0, clean_data)
+            st.session_state.clean_history = st.session_state.clean_history[:4]
+            with clean_container:
+                clean_container.empty()
+                for item in st.session_state.clean_history:
+                    st.json(item)
+                    st.markdown("---")
+            
+            time.sleep(1.5)
