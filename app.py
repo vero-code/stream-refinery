@@ -20,6 +20,7 @@ st.markdown("""
     .status-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
     .status-clean { background-color: #1B5E20; color: #81C784; }
     .status-dirty { background-color: #B71C1C; color: #EF9A9A; }
+    div[data-testid="stRadio"] > label { font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -30,6 +31,8 @@ if 'clean_history' not in st.session_state:
     st.session_state.clean_history = []
 if 'is_running' not in st.session_state:
     st.session_state.is_running = False
+if 'mode_index' not in st.session_state:
+    st.session_state.mode_index = 0
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.image("https://img.icons8.com/fluency/96/data-configuration.png", width=80)
@@ -38,8 +41,9 @@ st.sidebar.title("Configuration")
 run_mode = st.sidebar.radio(
     "Data Source Mode:",
     ("🟢 Live Demo (Simulation)", "🔴 Real Kafka Stream"),
-    index=0,
-    help="Use Simulation for judging/testing if Kafka is offline."
+    index=st.session_state.mode_index,
+    disabled=True, 
+    help="Mode is automatically selected based on available credentials."
 )
 
 st.sidebar.divider()
@@ -124,6 +128,11 @@ else:
     status_message.empty()
 
     config = read_config()
+
+    if "bootstrap.servers" in config:
+        if st.session_state.mode_index != 1:
+            st.session_state.mode_index = 1
+            st.rerun()
 
     if "group.id" not in config: config["group.id"] = "streamlit-viewer-local-dev"
     if "auto.offset.reset" not in config: config["auto.offset.reset"] = "latest"
