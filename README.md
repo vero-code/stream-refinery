@@ -9,7 +9,12 @@
 **"Garbage In, Gold Out"** — Real-time data cleaning and enrichment using Confluent and Google Vertex AI. This project was developed specifically for the [**AI Partner Catalyst: Accelerate Innovation**](https://devpost.com/software/stream-refinery) hackathon to demonstrate real-time data cleansing using GenAI.
 
 ## 📺 Demo Video
-*(Will be added later.)*
+
+[![Stream Refinery Demo](https://img.youtube.com/vi/bjTfYRlqtBU/maxresdefault.jpg)](https://youtu.be/bjTfYRlqtBU)
+
+> **Click the image above to watch the full demo (2 min).**
+>
+> *See how it cleans dirty data streams instantly using Confluent Cloud & Gemini 2.5.*
 
 ## Project Goal
 Standardize and fix "dirty" data streams (typos in locations, product names) on the fly using LLMs, transforming a chaotic raw stream into a high-quality analytical dataset without manual intervention.
